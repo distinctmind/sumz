@@ -2,24 +2,30 @@ import {useState, useEffect} from 'react';
 import { copy, linkIcon, loader, tick } from '../assets';
 import { useLazyGetSummaryQuery } from '../services/article';
 
+interface Article {
+  url: string;
+  summary: string;
+}
+
 const Demo = () => {
 
-  const [article, setArticle] = useState({
+  const [article, setArticle] = useState<Article>({
     url: '',
     summary: '',
   });
 
-  const [allArticles, setAllArticles] = useState([]);
-  const [copied, setCopied] = useState('');
+  const [allArticles, setAllArticles] = useState<Article[]>([]);
+  const [copied, setCopied] = useState<string | boolean>('');
 
   const [getSummary, {error, isFetching}] = useLazyGetSummaryQuery();
 
   useEffect(()=>{
-    const articlesFromLocalStorage = JSON.parse(localStorage.getItem('articles'));
+    const articles = localStorage.getItem('articles');
+    const articlesFromLocalStorage = articles ? JSON.parse(articles) : null;
     if (articlesFromLocalStorage) setAllArticles(articlesFromLocalStorage);
   },[])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const { data } = await getSummary({articleUrl: article.url});
     if (data?.summary) {
@@ -36,10 +42,19 @@ const Demo = () => {
     }
   }
 
-  const handleCopy = (copyUrl) => {
+  const handleCopy = (copyUrl: string) => {
     setCopied(copyUrl);
     navigator.clipboard.writeText(copyUrl);
     setTimeout(()=> setCopied(false), 3000)
+  }
+
+  const renderError = () => {
+    if (error) {
+      if ('status' in error) {
+        const errorMessage = 'error' in error ? error.error : JSON.stringify(error.data);
+        return errorMessage;
+      }
+    }
   }
 
   return (
@@ -102,7 +117,7 @@ const Demo = () => {
             Well, that wasn't supposed to happen...
             <br/>
             <span className='font-satoshi font-normal text-gray-700'>
-              {error?.data?.error}
+              {renderError()}
             </span>
           </p>
         ) : (
